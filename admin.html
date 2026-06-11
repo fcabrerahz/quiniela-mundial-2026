@@ -419,14 +419,24 @@
 <div class="page">
   <div class="two-col">
 
-    <!-- LEFT: Real results entry -->
+    <!-- LEFT: Real results entry (groups + knockout tabs) -->
     <div>
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">Resultados reales</span>
           <span id="resultsCount" style="font-size:0.75rem;color:var(--ink-faint)">0 / 72</span>
         </div>
+        <!-- Round tabs -->
+        <div style="display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);overflow-x:auto">
+          <button class="btn btn-sm" id="rtab-groups" onclick="showRoundTab('groups')" style="background:var(--green);border-color:var(--green);color:#fff">Grupos</button>
+          <button class="btn btn-sm" id="rtab-r32"    onclick="showRoundTab('r32')">R32</button>
+          <button class="btn btn-sm" id="rtab-r16"    onclick="showRoundTab('r16')">Octavos</button>
+          <button class="btn btn-sm" id="rtab-qf"     onclick="showRoundTab('qf')">Cuartos</button>
+          <button class="btn btn-sm" id="rtab-sf"     onclick="showRoundTab('sf')">Semis</button>
+          <button class="btn btn-sm" id="rtab-final"  onclick="showRoundTab('final')">Final</button>
+        </div>
         <div class="panel-body" id="resultsPanel"></div>
+        <div class="panel-body" id="koResultsPanel" style="display:none"></div>
       </div>
     </div>
 
@@ -587,13 +597,24 @@ const MATCHES = [
 const realHome = new Array(MATCHES.length).fill(null);
 const realAway = new Array(MATCHES.length).fill(null);
 
-// Players: [{name, home:[], away:[]}]
+// Players: [{name, home:[], away:[], ko:{r32,r16,qf,sf,final}}]
 let players = [];
+
+// KO real results: {r32:[{h,a}x16], r16:[{h,a}x8], qf:[{h,a}x4], sf:[{h,a}x2], final:{h,a}}
+const KO_STAGES = ['r32','r16','qf','sf'];
+const KO_COUNTS = {r32:16, r16:8, qf:4, sf:2};
+let realKO = {
+  r32:  Array(16).fill(null).map(()=>({h:null,a:null})),
+  r16:  Array(8).fill(null).map(()=>({h:null,a:null})),
+  qf:   Array(4).fill(null).map(()=>({h:null,a:null})),
+  sf:   Array(2).fill(null).map(()=>({h:null,a:null})),
+  final:{h:null,a:null},
+};
 
 // ── PERSISTENCE ──
 function save() {
   try {
-    localStorage.setItem('admin2026', JSON.stringify({ realHome, realAway, players }));
+    localStorage.setItem('admin2026', JSON.stringify({ realHome, realAway, realKO, players }));
   } catch(e) {}
 }
 function load() {
@@ -602,8 +623,74 @@ function load() {
     if (!s) return;
     if (s.realHome) s.realHome.forEach((v, i) => { realHome[i] = v; });
     if (s.realAway) s.realAway.forEach((v, i) => { realAway[i] = v; });
+    if (s.realKO)   realKO = s.realKO;
     if (s.players)  players = s.players;
   } catch(e) {}
+}
+
+// ── ROUND TAB SWITCHER ──
+function showRoundTab(tab) {
+  document.getElementById('resultsPanel').style.display   = tab==='groups' ? '' : 'none';
+  document.getElementById('koResultsPanel').style.display = tab==='groups' ? 'none' : '';
+  ['groups','r32','r16','qf','sf','final'].forEach(t => {
+    const el = document.getElementById('rtab-'+t);
+    if (!el) return;
+    el.style.background = t===tab ? 'var(--green)' : '';
+    el.style.borderColor = t===tab ? 'var(--green)' : '';
+    el.style.color = t===tab ? '#fff' : '';
+  });
+  if (tab !== 'groups') renderKOResults(tab);
+}
+
+// ── KO RESULTS RENDERER ──
+function renderKOResults(stage) {
+  const panel = document.getElementById('koResultsPanel');
+  const labels = {
+    r32:   Array.from({length:16},(_,i)=>`Partido R32 #${i+1}`),
+    r16:   Array.from({length:8}, (_,i)=>`Octavo #${i+1}`),
+    qf:    Array.from({length:4}, (_,i)=>`Cuarto #${i+1}`),
+    sf:    ['Semifinal 1','Semifinal 2'],
+    final: ['Final — 19 Jul'],
+  };
+  const picks = stage==='final' ? [realKO.final] : realKO[stage];
+  const lbls  = labels[stage];
+
+  let html = `<div class="date-divider">${{r32:'Ronda de 32 · 28 Jun–3 Jul', r16:'Octavos · 4–7 Jul', qf:'Cuartos · 9–11 Jul', sf:'Semis · 14–15 Jul', final:'Final · 19 Jul'}[stage]}</div>`;
+
+  picks.forEach((p, i) => {
+    const filled = p.h!==null && p.a!==null;
+    html += `<div class="match-result-row${filled?' has-result':''}" id="ko-rrow-${stage}-${i}">
+      <div class="team-home" style="font-size:.75rem">${lbls[i]}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+        <div class="score-block">
+          <input class="score-input${p.h!==null?' set':''}" type="number" min="0" max="20" inputmode="numeric"
+            id="ko-rh-${stage}-${i}" value="${p.h!==null?p.h:''}" placeholder="–"
+            oninput="onRealKO('${stage}',${i},'h',this.value)"/>
+          <span class="score-sep">:</span>
+          <input class="score-input${p.a!==null?' set':''}" type="number" min="0" max="20" inputmode="numeric"
+            id="ko-ra-${stage}-${i}" value="${p.a!==null?p.a:''}" placeholder="–"
+            oninput="onRealKO('${stage}',${i},'a',this.value)"/>
+        </div>
+        <div style="font-size:.6rem;color:var(--ink-faint)">${filled?(p.h>p.a?'Local':'Empate/Visitante'):''}</div>
+      </div>
+      <div class="team-away" style="font-size:.75rem;text-align:left">&nbsp;</div>
+    </div>`;
+  });
+
+  panel.innerHTML = html;
+}
+
+function onRealKO(stage, idx, side, val) {
+  const num = val==='' ? null : Math.max(0, Math.min(20, parseInt(val,10)));
+  const p = stage==='final' ? realKO.final : realKO[stage][idx];
+  if (side==='h') p.h = isNaN(num)?null:num;
+  else            p.a = isNaN(num)?null:num;
+  const inp = document.getElementById(`ko-r${side}-${stage}-${idx}`);
+  if (inp) inp.classList.toggle('set', num!==null);
+  const row = document.getElementById(`ko-rrow-${stage}-${idx}`);
+  if (row) row.classList.toggle('has-result', p.h!==null && p.a!==null);
+  save();
+  renderLeaderboard();
 }
 
 // ── SCORING ──
@@ -726,27 +813,58 @@ function parseCSV(text, filename) {
 
   const home = new Array(MATCHES.length).fill(null);
   const away = new Array(MATCHES.length).fill(null);
+  const ko = {
+    r32:  Array(16).fill(null).map(()=>({h:null,a:null})),
+    r16:  Array(8).fill(null).map(()=>({h:null,a:null})),
+    qf:   Array(4).fill(null).map(()=>({h:null,a:null})),
+    sf:   Array(2).fill(null).map(()=>({h:null,a:null})),
+    final:{h:null,a:null},
+  };
 
-  // Lines 2+: idx,local,visitante,goles_local,goles_visitante
-  // (also supports old format: idx,goles_local,goles_visitante)
+  // Detect format:
+  // New full format: seccion,id,local,visitante,goles_local,goles_visitante
+  // Old group-only:  partido,local,visitante,goles_local,goles_visitante (or partido,goles_local,goles_visitante)
+  const headerLine = lines[1] || '';
+  const isNewFormat = headerLine.startsWith('seccion');
+
   lines.slice(2).forEach(line => {
     const parts = line.split(',');
     if (parts.length < 3) return;
-    const idx = parseInt(parts[0], 10);
-    // New format has team names in cols 1,2 and goals in cols 3,4
-    // Old format has goals in cols 1,2 — detect by checking if col 1 is a number
-    const col1isNum = !isNaN(parseInt(parts[1], 10)) && parts[1].trim() !== '';
-    const hRaw = col1isNum ? parts[1] : parts[3] || '';
-    const aRaw = col1isNum ? parts[2] : parts[4] || '';
-    const h = hRaw.trim() === '' ? null : parseInt(hRaw, 10);
-    const a = aRaw.trim() === '' ? null : parseInt(aRaw, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < MATCHES.length) {
-      home[idx] = isNaN(h) ? null : h;
-      away[idx] = isNaN(a) ? null : a;
+
+    if (isNewFormat) {
+      // cols: seccion, id, local, visitante, goles_local, goles_visitante
+      const seccion = parts[0].trim();
+      const idx = parseInt(parts[1], 10);
+      const h = parts[4]?.trim()==='' ? null : parseInt(parts[4], 10);
+      const a = parts[5]?.trim()==='' ? null : parseInt(parts[5], 10);
+      if (seccion === 'grupos' && !isNaN(idx) && idx >= 0 && idx < MATCHES.length) {
+        home[idx] = isNaN(h)?null:h;
+        away[idx] = isNaN(a)?null:a;
+      } else if (seccion === 'final') {
+        ko.final.h = isNaN(h)?null:h;
+        ko.final.a = isNaN(a)?null:a;
+      } else if (['r32','r16','qf','sf'].includes(seccion) && !isNaN(idx)) {
+        if (ko[seccion][idx]) {
+          ko[seccion][idx].h = isNaN(h)?null:h;
+          ko[seccion][idx].a = isNaN(a)?null:a;
+        }
+      }
+    } else {
+      // Old format: partido,local,visitante,goles_local,goles_visitante OR partido,goles_local,goles_visitante
+      const idx = parseInt(parts[0], 10);
+      const col1isNum = !isNaN(parseInt(parts[1],10)) && parts[1].trim()!=='';
+      const hRaw = col1isNum ? parts[1] : parts[3]||'';
+      const aRaw = col1isNum ? parts[2] : parts[4]||'';
+      const h = hRaw.trim()==='' ? null : parseInt(hRaw, 10);
+      const a = aRaw.trim()==='' ? null : parseInt(aRaw, 10);
+      if (!isNaN(idx) && idx >= 0 && idx < MATCHES.length) {
+        home[idx] = isNaN(h)?null:h;
+        away[idx] = isNaN(a)?null:a;
+      }
     }
   });
 
-  players.push({ name: playerName, home, away });
+  players.push({ name: playerName, home, away, ko });
   showToast(`✓ ${playerName} importado`);
 }
 
@@ -780,6 +898,7 @@ function clearAllPlayers() {
 // ── LEADERBOARD ──
 function calcPlayer(p) {
   let total = 0, exact = 0, result = 0, played = 0;
+  // Group stage
   MATCHES.forEach((_, i) => {
     const rH = realHome[i]; const rA = realAway[i];
     if (rH === null || rA === null) return;
@@ -789,7 +908,36 @@ function calcPlayer(p) {
     if (pts === 3) exact++;
     else if (pts === 1) result++;
   });
-  const pending = MATCHES.filter((_, i) => p.home[i] === null || p.away[i] === null).length;
+  // Knockout rounds (worth more: exact=5pts, correct winner=2pts)
+  if (p.ko) {
+    KO_STAGES.forEach(stage => {
+      realKO[stage].forEach((r, i) => {
+        if (r.h===null||r.a===null) return;
+        played++;
+        const pk = p.ko[stage]?.[i];
+        if (!pk||pk.h===null||pk.a===null) return;
+        if (pk.h===r.h && pk.a===r.a) { total+=5; exact++; }
+        else {
+          const pW = pk.h>pk.a?'1':pk.h===pk.a?'X':'2';
+          const rW = r.h>r.a?'1':r.h===r.a?'X':'2';
+          if (pW===rW) { total+=2; result++; }
+        }
+      });
+    });
+    // Final
+    const rf = realKO.final;
+    if (rf.h!==null && rf.a!==null && p.ko.final?.h!==null) {
+      played++;
+      const pf = p.ko.final;
+      if (pf.h===rf.h && pf.a===rf.a) { total+=10; exact++; }
+      else {
+        const pW = pf.h>pf.a?'1':pf.h===pf.a?'X':'2';
+        const rW = rf.h>rf.a?'1':rf.h===rf.a?'X':'2';
+        if (pW===rW) { total+=3; result++; }
+      }
+    }
+  }
+  const pending = MATCHES.filter((_, i) => p.home[i]===null||p.away[i]===null).length;
   return { total, exact, result, played, pending };
 }
 
@@ -907,7 +1055,15 @@ function exportLeaderboard() {
 // ── RESET ──
 function resetAdmin() {
   if (!confirm('¿Borrar resultados y jugadores? No se puede deshacer.')) return;
-  realHome.fill(null); realAway.fill(null); players = [];
+  realHome.fill(null); realAway.fill(null);
+  realKO = {
+    r32:  Array(16).fill(null).map(()=>({h:null,a:null})),
+    r16:  Array(8).fill(null).map(()=>({h:null,a:null})),
+    qf:   Array(4).fill(null).map(()=>({h:null,a:null})),
+    sf:   Array(2).fill(null).map(()=>({h:null,a:null})),
+    final:{h:null,a:null},
+  };
+  players = [];
   localStorage.removeItem('admin2026');
   renderResults(); renderPlayers(); renderLeaderboard();
   showToast('Admin reiniciado');
@@ -932,7 +1088,7 @@ renderLeaderboard();
 <script>
 // ── PASSWORD GATE ──
 // Change this to your desired password:
-const ADMIN_PASSWORD = 'kukut1t4';
+const ADMIN_PASSWORD = 'mundial2026';
 
 function checkPw() {
   const val = document.getElementById('pwInput').value;

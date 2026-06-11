@@ -374,6 +374,67 @@
       .team-home, .team-away { font-size: 0.78rem; }
       .score-input { width: 32px; height: 32px; font-size: 0.95rem; }
     }
+    /* ── POINTS SCALE ── */
+    .points-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--green);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .points-title {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-mid);
+      margin-bottom: 0.75rem;
+    }
+    .points-grid { display: flex; flex-direction: column; gap: 0.5rem; }
+    .points-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .points-row:last-child { border-bottom: none; }
+    .points-stage {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ink);
+      min-width: 200px;
+    }
+    .points-item {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.75rem;
+      color: var(--ink-mid);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pts-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .pts-badge.exact  { background: var(--green-light); color: var(--green); }
+    .pts-badge.result { background: #e8f0fb; color: #1a5fa8; }
+    .points-tip {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.73rem;
+      color: var(--ink-faint);
+      margin-top: 0.65rem;
+    }
+    .points-tip a { color: var(--green); text-decoration: none; font-weight: 600; }
+    .points-tip a:hover { text-decoration: underline; }
+
   </style>
 </head>
 <body>
@@ -401,6 +462,29 @@
       <label>Fecha de entrega</label>
       <input type="date" id="dueDate" />
     </div>
+  </div>
+
+  <!-- Points scale -->
+  <div class="points-card">
+    <div class="points-title">⭐ Sistema de puntuación</div>
+    <div class="points-grid">
+      <div class="points-row">
+        <span class="points-stage">Fase de Grupos</span>
+        <span class="points-item"><span class="pts-badge exact">3 pts</span> Marcador exacto</span>
+        <span class="points-item"><span class="pts-badge result">1 pt</span> Solo resultado (1/X/2)</span>
+      </div>
+      <div class="points-row">
+        <span class="points-stage">R32 · Octavos · Cuartos · Semis</span>
+        <span class="points-item"><span class="pts-badge exact">5 pts</span> Marcador exacto</span>
+        <span class="points-item"><span class="pts-badge result">2 pts</span> Solo ganador</span>
+      </div>
+      <div class="points-row">
+        <span class="points-stage">🏆 Final</span>
+        <span class="points-item"><span class="pts-badge exact">10 pts</span> Marcador exacto</span>
+        <span class="points-item"><span class="pts-badge result">3 pts</span> Solo ganador</span>
+      </div>
+    </div>
+    <div class="points-tip">Llena la fase de grupos aquí, luego ve al <a href="bracket.html">🏆 Bracket</a> para pronosticar las eliminatorias y exportar tu quiniela completa.</div>
   </div>
 
   <!-- Progress -->

@@ -125,6 +125,7 @@
 <div class="toolbar">
   <button class="btn btn-green" onclick="loadFromStorage()">↺ Recargar desde quiniela</button>
   <button class="btn" onclick="clearKnockout()">Limpiar picks knockout</button>
+  <button class="btn btn-green" onclick="exportFullCSV()">⬇ Exportar quiniela completa</button>
   <span class="toolbar-label" id="loadStatus">—</span>
 </div>
 
@@ -644,6 +645,59 @@ function onKOFinal(side, val) {
   else            koPicks.final.a = isNaN(num)?null:num;
   saveKO();
   renderSF();
+}
+
+// ─── EXPORT FULL CSV (groups + knockout) ─────────────────────────────────
+function exportFullCSV() {
+  const name = document.getElementById('playerNameInput')?.value.trim() || (() => {
+    try { const s = JSON.parse(localStorage.getItem('quiniela2026')||'{}'); return s.name||''; } catch(e){ return ''; }
+  })();
+  if (!name) { showToast('⚠ Escribe tu nombre en la quiniela de grupos primero'); return; }
+
+  let csv = `NOMBRE,${name}\n`;
+  csv += `seccion,id,local,visitante,goles_local,goles_visitante\n`;
+
+  // Group stage picks
+  GROUP_MATCHES.forEach(m => {
+    const h = goalsHome[m.idx]; const a = goalsAway[m.idx];
+    csv += `grupos,${m.idx},${m.home},${m.away},${h!==null?h:''},${a!==null?a:''}\n`;
+  });
+
+  // Knockout picks — r32
+  koPicks.r32.forEach((p, i) => {
+    const hTeam = resolveTeam(R32_SLOTS[i].home)||'?';
+    const aTeam = resolveTeam(R32_SLOTS[i].away)||'?';
+    csv += `r32,${i},${hTeam},${aTeam},${p.h!==null?p.h:''},${p.a!==null?p.a:''}\n`;
+  });
+  // r16
+  koPicks.r16.forEach((p, i) => {
+    const hTeam = resolveTeam(R16_SLOTS[i].home)||'?';
+    const aTeam = resolveTeam(R16_SLOTS[i].away)||'?';
+    csv += `r16,${i},${hTeam},${aTeam},${p.h!==null?p.h:''},${p.a!==null?p.a:''}\n`;
+  });
+  // qf
+  koPicks.qf.forEach((p, i) => {
+    const hTeam = resolveTeam(QF_SLOTS[i].home)||'?';
+    const aTeam = resolveTeam(QF_SLOTS[i].away)||'?';
+    csv += `qf,${i},${hTeam},${aTeam},${p.h!==null?p.h:''},${p.a!==null?p.a:''}\n`;
+  });
+  // sf
+  koPicks.sf.forEach((p, i) => {
+    const hTeam = resolveTeam(SF_SLOTS[i].home)||'?';
+    const aTeam = resolveTeam(SF_SLOTS[i].away)||'?';
+    csv += `sf,${i},${hTeam},${aTeam},${p.h!==null?p.h:''},${p.a!==null?p.a:''}\n`;
+  });
+  // final
+  const fH = resolveTeam(FINAL_SLOT.home)||'?';
+  const fA = resolveTeam(FINAL_SLOT.away)||'?';
+  csv += `final,0,${fH},${fA},${koPicks.final.h!==null?koPicks.final.h:''},${koPicks.final.a!==null?koPicks.final.a:''}\n`;
+
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `quiniela-completa-${name.replace(/\s+/g,'-').toLowerCase()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast(`✓ Quiniela completa de ${name} exportada`);
 }
 
 // ─── TABS ────────────────────────────────────────────────────────────────
