@@ -340,9 +340,66 @@
       color: var(--ink-faint); font-size: 0.85rem; line-height: 1.8;
     }
     .empty-state .big { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
+    /* ── PASSWORD GATE ── */
+    .pw-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1.25rem;
+      padding: 1.5rem;
+    }
+    .pw-box {
+      background: var(--white); border-radius: 12px;
+      padding: 2rem 2rem 1.75rem;
+      width: 100%; max-width: 320px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .pw-ball { font-size: 2.2rem; display: block; margin-bottom: .5rem; }
+    .pw-title { font-size: 1rem; font-weight: 700; margin-bottom: .25rem; }
+    .pw-sub { font-size: .78rem; color: var(--ink-mid); margin-bottom: 1.25rem; }
+    .pw-input {
+      width: 100%; font-size: 1rem; font-weight: 600; letter-spacing: .12em;
+      padding: 10px 14px; border: 1.5px solid var(--line);
+      border-radius: 8px; outline: none; text-align: center;
+      background: var(--bg); color: var(--ink);
+      transition: border-color .15s;
+    }
+    .pw-input:focus { border-color: var(--green); }
+    .pw-input.error { border-color: var(--red); animation: shake .3s; }
+    .pw-btn {
+      margin-top: .75rem; width: 100%; padding: 10px;
+      background: var(--green); color: #fff; border: none;
+      border-radius: 8px; font-size: .9rem; font-weight: 700;
+      cursor: pointer; transition: background .12s;
+    }
+    .pw-btn:hover { background: var(--green-dark); }
+    .pw-error { font-size: .75rem; color: var(--red); margin-top: .5rem; min-height: 1em; }
+    @keyframes shake {
+      0%,100%{ transform:translateX(0); }
+      25%{ transform:translateX(-6px); }
+      75%{ transform:translateX(6px); }
+    }
   </style>
 </head>
 <body>
+
+<!-- PASSWORD GATE -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <span class="pw-ball">🔒</span>
+    <div class="pw-title">Área de Administrador</div>
+    <div class="pw-sub">Quiniela Mundial 2026</div>
+    <input class="pw-input" type="password" id="pwInput"
+      placeholder="Contraseña"
+      onkeydown="if(event.key==='Enter') checkPw()"
+      autocomplete="current-password" />
+    <div class="pw-error" id="pwError"></div>
+    <button class="pw-btn" onclick="checkPw()">Entrar →</button>
+  </div>
+</div>
+
+<div id="adminContent" style="display:none">
 
 <header>
   <div class="header-left">
@@ -868,6 +925,39 @@ load();
 renderResults();
 renderPlayers();
 renderLeaderboard();
+</script>
+
+</div><!-- /adminContent -->
+
+<script>
+// ── PASSWORD GATE ──
+// Change this to your desired password:
+const ADMIN_PASSWORD = 'kukut1t4';
+
+function checkPw() {
+  const val = document.getElementById('pwInput').value;
+  const err = document.getElementById('pwError');
+  if (val === ADMIN_PASSWORD) {
+    document.getElementById('pwOverlay').style.display = 'none';
+    document.getElementById('adminContent').style.display = 'block';
+    sessionStorage.setItem('adminAuth', '1');
+  } else {
+    err.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+    const inp = document.getElementById('pwInput');
+    inp.classList.add('error');
+    inp.value = '';
+    setTimeout(() => inp.classList.remove('error'), 400);
+  }
+}
+
+// Auto-unlock if already authenticated this session
+if (sessionStorage.getItem('adminAuth') === '1') {
+  document.getElementById('pwOverlay').style.display = 'none';
+  document.getElementById('adminContent').style.display = 'block';
+} else {
+  // Focus password input
+  setTimeout(() => document.getElementById('pwInput').focus(), 100);
+}
 </script>
 </body>
 </html>
