@@ -723,11 +723,11 @@ function exportCSV() {
 
   // Row 1: NOMBRE,Juan García
   // Row 2: header
-  // Rows 3+: partido_id,goles_local,goles_visitante
-  let csv = `NOMBRE,${name}\npartido,local,visitante\n`;
+  // Rows 3+: partido_id,local,visitante,goles_local,goles_visitante
+  let csv = `NOMBRE,${name}\npartido,local,visitante,goles_local,goles_visitante\n`;
   MATCHES.forEach((m, i) => {
     const h = goalsHome[i]; const a = goalsAway[i];
-    csv += `${i},${h !== null ? h : ''},${a !== null ? a : ''}\n`;
+    csv += `${i},${m.home},${m.away},${h !== null ? h : ''},${a !== null ? a : ''}\n`;
   });
 
   const bom = '\uFEFF';
